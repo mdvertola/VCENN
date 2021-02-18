@@ -9,7 +9,7 @@ import numpy as np
 from tqdm import tqdm
 import argparse
 random.seed(42)
-import threading 
+import threading
 import configs
 import logging
 logger = logging.getLogger(__name__)
@@ -20,13 +20,13 @@ import models, configs, data_loader
 
 class SearchEngine:
     def __init__(self, args, conf=None):
-        self.data_path = args.data_path + args.dataset+'/' 
+        self.data_path = args.data_path + args.dataset+'/'
         self.train_params = conf.get('training_params', dict())
         self.data_params = conf.get('data_params',dict())
         self.model_params = conf.get('model_params',dict())
-        
+
         self._eval_sets = None
-        
+
         self._code_reprs = None
         self._codebase = None
         self._codebase_chunksize = 2000000
@@ -36,7 +36,7 @@ class SearchEngine:
         model_path = f"./output/{model.__class__.__name__}/models/"
         os.makedirs(model_path, exist_ok=True)
         model.save(model_path + f"epo{epoch}_code.h5", model_path + f"epo{epoch}_desc.h5", overwrite=True)
-        
+
     def load_model(self, model, epoch):
         model_path = f"./output/{model.__class__.__name__}/models/"
         assert os.path.exists(model_path + f"epo{epoch}_code.h5"),f"Weights at epoch {epoch} not found"
@@ -53,21 +53,21 @@ class SearchEngine:
         batch_size = self.train_params.get('batch_size', 128)
         nb_epoch = self.train_params.get('nb_epoch', 10)
         split = self.train_params.get('validation_split', 0)
-        
+
         val_loss = {'loss': 1., 'epoch': 0}
         chunk_size = self.train_params.get('chunk_size', 100000)
-        
+
         for i in range(self.train_params['reload']+1, nb_epoch):
-            print('Epoch %d :: \n' % i, end='')  
-            
+            print('Epoch %d :: \n' % i, end='')
+
             logger.debug('loading data chunk..')
             offset = (i-1)*self.train_params.get('chunk_size', 100000)
-            
+
             names = data_loader.load_hdf5(self.data_path+self.data_params['train_methname'], offset, chunk_size)
             apis = data_loader.load_hdf5(self.data_path+self.data_params['train_apiseq'], offset, chunk_size)
             tokens = data_loader.load_hdf5(self.data_path+self.data_params['train_tokens'], offset, chunk_size)
             descs = data_loader.load_hdf5(self.data_path+self.data_params['train_desc'], offset, chunk_size)
-            
+
             logger.debug('padding data..')
             methnames = pad(names, self.data_params['methname_len'])
             apiseqs = pad(apis, self.data_params['apiseq_len'])
@@ -82,17 +82,17 @@ class SearchEngine:
             if hist.history['val_loss'][0] < val_loss['loss']:
                 val_loss = {'loss': hist.history['val_loss'][0], 'epoch': i}
             print('Best: Loss = {}, Epoch = {}'.format(val_loss['loss'], val_loss['epoch']))
-            
+
             if save_every is not None and i % save_every == 0:
                 self.save_model(model, i)
 
-            if valid_every is not None and i % valid_every == 0:                
-                acc, mrr, map, ndcg = self.valid(model, 1000, 1)             
+            if valid_every is not None and i % valid_every == 0:
+                acc, mrr, map, ndcg = self.valid(model, 1000, 1)
 
     ##### Evaluation in the develop set #####
-    def valid(self, model, poolsize, K):
+    def eval(self, model, poolsize, K):
         """
-        validate in a code pool. 
+        validate in a code pool.
         param: poolsize - size of the code pool, if -1, load the whole test set
         """
         def ACC(real,predict):
@@ -100,7 +100,7 @@ class SearchEngine:
             for val in real:
                 try: index=predict.index(val)
                 except ValueError: index=-1
-                if index!=-1: sum=sum+1  
+                if index!=-1: sum=sum+1
             return sum/float(len(real))
         def MAP(real,predict):
             sum=0.0
@@ -137,9 +137,9 @@ class SearchEngine:
             methnames = data_loader.load_hdf5(self.data_path+self.data_params['valid_methname'], 0, poolsize)
             apiseqs= data_loader.load_hdf5(self.data_path+self.data_params['valid_apiseq'], 0, poolsize)
             tokens = data_loader.load_hdf5(self.data_path+self.data_params['valid_tokens'], 0, poolsize)
-            descs = data_loader.load_hdf5(self.data_path+self.data_params['valid_desc'], 0, poolsize) 
+            descs = data_loader.load_hdf5(self.data_path+self.data_params['valid_desc'], 0, poolsize)
             self._eval_sets={'methnames':methnames, 'apiseqs':apiseqs, 'tokens':tokens, 'descs':descs}
-            
+
         accs,mrrs,maps,ndcgs = [], [], [], []
         data_len = len(self._eval_sets['descs'])
         for i in tqdm(range(data_len)):
@@ -148,38 +148,38 @@ class SearchEngine:
             methnames = pad(self._eval_sets['methnames'],self.data_params['methname_len'])
             apiseqs= pad(self._eval_sets['apiseqs'],self.data_params['apiseq_len'])
             tokens= pad(self._eval_sets['tokens'],self.data_params['tokens_len'])
-            n_results = K          
+            n_results = K
             sims = model.predict([methnames, apiseqs,tokens, descs], batch_size=data_len).flatten()
             negsims= np.negative(sims)
             predict = np.argpartition(negsims, kth=n_results-1)
-            predict = predict[:n_results]   
+            predict = predict[:n_results]
             predict = [int(k) for k in predict]
             real=[i]
             accs.append(ACC(real,predict))
             mrrs.append(MRR(real,predict))
             maps.append(MAP(real,predict))
-            ndcgs.append(NDCG(real,predict))                          
-        logger.info(f'ACC={np.mean(accs)}, MRR={np.mean(mrrs)}, MAP={np.mean(maps)}, nDCG={np.mean(ndcgs)}')        
-        return acc,mrr,map,ndcg
-    
-    
+            ndcgs.append(NDCG(real,predict))
+        logger.info(f'ACC={np.mean(accs)}, MRR={np.mean(mrrs)}, MAP={np.mean(maps)}, nDCG={np.mean(ndcgs)}')
+        return accs,mrrs,maps,ndcgs
+
+
     ##### Compute Representation #####
     def repr_code(self, model):
         logger.info('Loading the use data ..')
         methnames = data_loader.load_hdf5(self.data_path+self.data_params['use_methname'],0,-1)
         apiseqs = data_loader.load_hdf5(self.data_path+self.data_params['use_apiseq'],0,-1)
-        tokens = data_loader.load_hdf5(self.data_path+self.data_params['use_tokens'],0,-1) 
+        tokens = data_loader.load_hdf5(self.data_path+self.data_params['use_tokens'],0,-1)
         methnames = pad(methnames, self.data_params['methname_len'])
         apiseqs = pad(apiseqs, self.data_params['apiseq_len'])
         tokens = pad(tokens, self.data_params['tokens_len'])
-        
+
         logger.info('Representing code ..')
         vecs= model.repr_code([methnames, apiseqs, tokens], batch_size=10000)
         vecs= vecs.astype(np.float)
         vecs= normalize(vecs)
         return vecs
-            
-    
+
+
     def search(self, model, vocab, query, n_results=10):
         desc=[convert(vocab, query)]#convert desc sentence to word indices
         padded_desc = pad(desc, self.data_params['desc_len'])
@@ -196,27 +196,27 @@ class SearchEngine:
         for t in threads:#wait until all sub-threads finish
             t.join()
         return codes,sims
-                 
-    def search_thread(self, codes, sims, desc_repr, code_reprs, i, n_results):        
+
+    def search_thread(self, codes, sims, desc_repr, code_reprs, i, n_results):
     #1. compute similarity
-        chunk_sims=np.dot(code_reprs, desc_repr) # [pool_size x 1] 
+        chunk_sims=np.dot(code_reprs, desc_repr) # [pool_size x 1]
         chunk_sims = np.squeeze(chunk_sims, axis=1)
     #2. choose top results
         negsims=np.negative(chunk_sims)
         maxinds = np.argpartition(negsims, kth=n_results-1)
-        maxinds = maxinds[:n_results]        
+        maxinds = maxinds[:n_results]
         chunk_codes = [self._codebase[i][k] for k in maxinds]
         chunk_sims = chunk_sims[maxinds]
         codes.extend(chunk_codes)
         sims.extend(chunk_sims)
-        
+
     def postproc(self,codes_sims):
         codes_, sims_ = zip(*codes_sims)
         codes= [code for code in codes_]
         sims= [sim for sim in sims_]
         final_codes=[]
         final_sims=[]
-        n=len(codes_sims)        
+        n=len(codes_sims)
         for i in range(n):
             is_dup=False
             for j in range(i):
@@ -227,7 +227,7 @@ class SearchEngine:
                 final_sims.append(sims[i])
         return zip(final_codes,final_sims)
 
-    
+
 def parse_args():
     parser = argparse.ArgumentParser("Train and Test Code Search(Embedding) Model")
     parser.add_argument("--data_path", type=str, default='./data/', help="working directory")
@@ -252,26 +252,26 @@ if __name__ == '__main__':
     model = getattr(models, args.model)(config)#initialize the model
     model.build()
     model.summary(export_path = f"./output/{args.model}/")
-    
+
     optimizer = config.get('training_params', dict()).get('optimizer', 'adam')
-    model.compile(optimizer=optimizer)  
+    model.compile(optimizer=optimizer)
 
     data_path = args.data_path+args.dataset+'/'
-    
-    if args.mode=='train':  
+
+    if args.mode=='train':
         engine.train(model)
-        
+
     elif args.mode=='eval': # evaluate for a specific epoch
         if config['training_params']['reload']>0:
             engine.load_model(model, config['training_params']['reload'])
         engine.eval(model, -1, 10)
-        
+
     elif args.mode=='repr_code':
         if config['training_params']['reload']>0:
             engine.load_model(model, config['training_params']['reload'])
         vecs = engine.repr_code(model)
         data_loader.save_code_reprs(vecs, data_path+config['data_params']['use_codevecs'])
-        
+
     elif args.mode=='search':
         #search code based on a desc
         if config['training_params']['reload']>0:
