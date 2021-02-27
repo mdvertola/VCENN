@@ -9,7 +9,7 @@ Model is under development and not in working order currently.
 ## Citation
 This code and approach was adapted from the following:
 Code for the ICSE 2018 paper [Deep Code Search](https://guxd.github.io/papers/deepcs.pdf).
-If you find it useful and would like to cite it, the following would be appropriate:
+
 ```
 @inproceedings{gu2018deepcs,
   title={Deep Code Search},
