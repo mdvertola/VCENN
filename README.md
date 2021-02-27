@@ -2,7 +2,7 @@
 
 The proposed model aims to detect code clones of vulnerable GitHub commits within Stack Overflow answers.
 
-Model is under development and not in working order currently.
+Model is currently under development and not in working order.
 
 
 
