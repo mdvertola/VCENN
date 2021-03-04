@@ -3,10 +3,12 @@ def config_JointEmbeddingModel():
     config = {
         'data_params':{
             #training data
-            'train_methname':'train.methname.h5',
-            'train_apiseq':'train.apiseq.h5',
-            'train_tokens':'train.tokens.h5',
-            'train_desc':'train.desc.h5',
+            'train_stack_methname':'train.stack_methname.h5',
+            'train_stack_apiseq':'train.stack_apiseq.h5',
+            'train_stack_tokens':'train.stack_tokens.h5',
+            'train_git_methname':'train.git_methname.h5',
+            'train_git_apiseq':'train.git_apiseq.h5',
+            'train_git_tokens':'train.git_tokens.h5',
             #valid data
             'valid_methname':'test.methname.h5',
             'valid_apiseq':'test.apiseq.h5',
@@ -21,9 +23,12 @@ def config_JointEmbeddingModel():
             'use_codevecs':'use.codevecs.normalized.h5',#'use.codevecs.h5',
 
             #parameters
-            'methname_len': 6,
-            'apiseq_len':30,
-            'tokens_len':50,
+            'stack_methname_len': 6,
+            'stack_apiseq_len':30,
+            'stack_tokens_len':50,
+            'git_methname_len': 6,
+            'git_apiseq_len':30,
+            'git_tokens_len':50,
             'desc_len': 30,
             'n_words': 10000, # len(vocabulary) + 1
             #vocabulary info
@@ -54,8 +59,10 @@ def config_JointEmbeddingModel():
             'n_hidden': 400,#number of hidden dimension of code/desc representation
             # recurrent
             'n_lstm_dims': 200, # * 2
-            'init_embed_weights_methname': None,#'word2vec_100_methname.h5',
-            'init_embed_weights_tokens': None,#'word2vec_100_tokens.h5',
+            'init_embed_weights_git_methname': None,#'word2vec_100_methname.h5',
+            'init_embed_weights_git_tokens': None,#'word2vec_100_tokens.h5',
+            'init_embed_weights_stack_methname': None,#'word2vec_100_methname.h5',
+            'init_embed_weights_stack_tokens': None,#'word2vec_100_tokens.h5',
             'init_embed_weights_desc': None,#'word2vec_100_desc.h5',
             'margin': 0.05,
             'sim_measure':'cos',#similarity measure: gesd, cos, aesd

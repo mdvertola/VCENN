@@ -63,21 +63,29 @@ class SearchEngine:
             logger.debug('loading data chunk..')
             offset = (i-1)*self.train_params.get('chunk_size', 100000)
 
-            names = data_loader.load_hdf5(self.data_path+self.data_params['train_methname'], offset, chunk_size)
-            apis = data_loader.load_hdf5(self.data_path+self.data_params['train_apiseq'], offset, chunk_size)
-            tokens = data_loader.load_hdf5(self.data_path+self.data_params['train_tokens'], offset, chunk_size)
-            descs = data_loader.load_hdf5(self.data_path+self.data_params['train_desc'], offset, chunk_size)
+            git_methnames = data_loader.load_hdf5(self.data_path+self.data_params['train_git_methname'], offset, chunk_size)
+            git_apis = data_loader.load_hdf5(self.data_path+self.data_params['train_git_apiseq'], offset, chunk_size)
+            git_tokens = data_loader.load_hdf5(self.data_path+self.data_params['train_git_tokens'], offset, chunk_size)
+            stack_methnames = data_loader.load_hdf5(self.data_path+self.data_params['train_stack_methname'], offset, chunk_size)
+            stack_apis = data_loader.load_hdf5(self.data_path+self.data_params['train_stack_apiseq'], offset, chunk_size)
+            stack_tokens = data_loader.load_hdf5(self.data_path+self.data_params['train_stack_tokens'], offset, chunk_size)
+            
 
             logger.debug('padding data..')
-            methnames = pad(names, self.data_params['methname_len'])
-            apiseqs = pad(apis, self.data_params['apiseq_len'])
-            tokens = pad(tokens, self.data_params['tokens_len'])
-            good_descs = pad(descs,self.data_params['desc_len'])
-            bad_descs=[desc for desc in descs]
-            random.shuffle(bad_descs)
-            bad_descs = pad(bad_descs, self.data_params['desc_len'])
+            git_methnames = pad(git_methnames, self.data_params['git_methname_len'])
+            git_apiseqs = pad(git_apis, self.data_params['git_apiseq_len'])
+            git_tokens = pad(git_tokens, self.data_params['git_tokens_len'])
+            stack_methnames = pad(stack_methnames, self.data_params['stack_methname_len'])
+            stack_apiseqs = pad(stack_apis, self.data_params['stack_apiseq_len'])
+            stack_tokens = pad(stack_tokens, self.data_params['stack_tokens_len'])
+            
+            
+            # good_descs = pad(descs,self.data_params['desc_len'])
+            # bad_descs=[desc for desc in descs]
+            # random.shuffle(bad_descs)
+            # bad_descs = pad(bad_descs, self.data_params['desc_len'])
 
-            hist = model.fit([methnames, apiseqs, tokens, good_descs, bad_descs], epochs=1, batch_size=batch_size, validation_split=split)
+            hist = model.fit([git_methnames, git_apiseqs, git_tokens, stack_methnames, stack_apiseqs, stack_tokens], epochs=1, batch_size=batch_size, validation_split=split)
 
             if hist.history['val_loss'][0] < val_loss['loss']:
                 val_loss = {'loss': hist.history['val_loss'][0], 'epoch': i}
