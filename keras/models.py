@@ -45,23 +45,23 @@ class JointEmbeddingModel:
         #1.embedding
         git_init_emb_weights = np.load(self.model_params['init_embed_weights_git_methname']) if self.model_params['init_embed_weights_git_methname'] is not None else None
         if git_init_emb_weights is not None: git_init_emb_weights = [git_init_emb_weights]
-        embedding = Embedding(input_dim=self.data_params['n_words'],
+        git_methname_embedding = Embedding(input_dim=self.data_params['n_words'],
                               output_dim=self.model_params.get('n_embed_dims', 100),
                               weights=git_init_emb_weights,
                               mask_zero=False,#Whether 0 in the input is a special "padding" value that should be masked out. 
                               #If True, all subsequent layers in the model must support masking, otherwise an exception will be raised.
-                              name='embedding_git_methname')
-        git_methname_embedding = embedding(git_methname)
-        dropout = Dropout(0.25,name='dropout_git_methname_embed')
-        git_methname_dropout = dropout(git_methname_embedding)
+                              name='git_methname_embedding')
+        git_methname_embedding = git_methname_embedding(git_methname)
+        git_methname_embedding_dropout = Dropout(0.25,name='dropout_git_methname_embed')
+        git_methname_dropout = git_methname_embedding_dropout(git_methname_embedding)
         #2.rnn
-        f_rnn = LSTM(self.model_params.get('n_lstm_dims', 128), recurrent_dropout=0.2, 
+        git_methname_f_rnn = LSTM(self.model_params.get('n_lstm_dims', 128), recurrent_dropout=0.2, 
                      return_sequences=True, name='lstm_git_methname_f')
         
-        b_rnn = LSTM(self.model_params.get('n_lstm_dims', 128), return_sequences=True, 
+        git_methname_b_rnn = LSTM(self.model_params.get('n_lstm_dims', 128), return_sequences=True, 
                      recurrent_dropout=0.2, name='lstm_git_methname_b',go_backwards=True)        
-        git_methname_f_rnn = f_rnn(git_methname_dropout)
-        git_methname_b_rnn = b_rnn(git_methname_dropout)
+        git_methname_f_rnn = git_methname_f_rnn(git_methname_dropout)
+        git_methname_b_rnn = git_methname_b_rnn(git_methname_dropout)
         dropout = Dropout(0.25,name='dropout_git_methname_rnn')
         git_methname_f_dropout = dropout(git_methname_f_rnn)
         git_methname_b_dropout = dropout(git_methname_b_rnn)
@@ -74,51 +74,51 @@ class JointEmbeddingModel:
         
         ## API Sequence Representation ##
         #1.embedding
-        embedding = Embedding(input_dim=self.data_params['n_words'],
+        git_apiseq_embedding = Embedding(input_dim=self.data_params['n_words'],
                               output_dim=self.model_params.get('n_embed_dims', 100),
                               #weights=weights,
                               mask_zero=False,#Whether 0 in the input is a special "padding" value that should be masked out. 
                                          #If True, all subsequent layers must support masking, otherwise an exception will be raised.
                               name='embedding_git_apiseq')
-        git_apiseq_embedding = embedding(git_apiseq)
+        git_apiseq_embedding = git_apiseq_embedding(git_apiseq)
         dropout = Dropout(0.25,name='dropout_apiseq_embed')
         git_apiseq_dropout = dropout(git_apiseq_embedding)
         #2.rnn
-        f_rnn = LSTM(self.model_params.get('n_lstm_dims', 100), return_sequences=True, recurrent_dropout=0.2,
+        git_apiseq_f_rnn = LSTM(self.model_params.get('n_lstm_dims', 100), return_sequences=True, recurrent_dropout=0.2,
                       name='git_lstm_apiseq_f')
-        b_rnn = LSTM(self.model_params.get('n_lstm_dims', 100), return_sequences=True, recurrent_dropout=0.2, 
+        git_apiseq_b_rnn = LSTM(self.model_params.get('n_lstm_dims', 100), return_sequences=True, recurrent_dropout=0.2, 
                       name='git_lstm_apiseq_b', go_backwards=True)        
-        apiseq_f_rnn = f_rnn(git_apiseq_dropout)
-        apiseq_b_rnn = b_rnn(git_apiseq_dropout)
+        git_apiseq_f_rnn = git_apiseq_f_rnn(git_apiseq_dropout)
+        git_apiseq_b_rnn = git_apiseq_b_rnn(git_apiseq_dropout)
         dropout = Dropout(0.25,name='dropout_apiseq_rnn')
-        git_apiseq_f_dropout = dropout(apiseq_f_rnn)
-        git_apiseq_b_dropout = dropout(apiseq_b_rnn)
+        git_apiseq_f_dropout = dropout(git_apiseq_f_rnn)
+        git_apiseq_b_dropout = dropout(git_apiseq_b_rnn)
         #3.maxpooling
-        maxpool = Lambda(lambda x: K.max(x, axis=1, keepdims=False), output_shape=lambda x: (x[0], x[2]),name='maxpool_git_apiseq')
-        git_apiseq_pool = Concatenate(name='git_concat_apiseq_lstms')([maxpool(git_apiseq_f_dropout), maxpool(git_apiseq_b_dropout)])
-        activation = Activation('tanh',name='active_git_apiseq')
-        git_apiseq_repr = activation(git_apiseq_pool)
+        git_apiseq_maxpool = Lambda(lambda x: K.max(x, axis=1, keepdims=False), output_shape=lambda x: (x[0], x[2]),name='maxpool_git_apiseq')
+        git_apiseq_pool = Concatenate(name='git_concat_apiseq_lstms')([git_apiseq_maxpool(git_apiseq_f_dropout), git_apiseq_maxpool(git_apiseq_b_dropout)])
+        git_apiseq_activation = Activation('tanh',name='active_git_apiseq')
+        git_apiseq_repr = git_apiseq_activation(git_apiseq_pool)
         
         
         ## Tokens Representation ##
         #1.embedding
         git_init_emb_weights = np.load(self.model_params['init_embed_weights_git_tokens']) if self.model_params['init_embed_weights_git_tokens'] is not None else None
         if git_init_emb_weights is not None: git_init_emb_weights = [git_init_emb_weights]
-        embedding = Embedding(input_dim=self.data_params['n_words'],
+        git_tokens_embedding = Embedding(input_dim=self.data_params['n_words'],
                               output_dim=self.model_params.get('n_embed_dims', 100),
                               weights=git_init_emb_weights,
                               #mask_zero=True,#Whether 0 in the input is a special "padding" value that should be masked out. 
                               #If True, all subsequent layers must support masking, otherwise an exception will be raised.
                               name='embedding_tokens')
-        git_tokens_embedding = embedding(git_tokens)
+        git_tokens_embedding = git_tokens_embedding(git_tokens)
         dropout = Dropout(0.25,name='git_dropout_tokens_embed')
         git_tokens_dropout= dropout(git_tokens_embedding)
 
         #4.maxpooling
-        maxpool = Lambda(lambda x: K.max(x, axis=1, keepdims=False), output_shape=lambda x: (x[0], x[2]),name='git_maxpool_tokens')
-        git_tokens_pool = maxpool(git_tokens_dropout)
-        activation = Activation('tanh',name='git_active_tokens')
-        git_tokens_repr= activation(git_tokens_pool)        
+        git_tokens_maxpool = Lambda(lambda x: K.max(x, axis=1, keepdims=False), output_shape=lambda x: (x[0], x[2]),name='git_maxpool_tokens')
+        git_tokens_pool = git_tokens_maxpool(git_tokens_dropout)
+        git_tokens_activation = Activation('tanh',name='git_active_tokens')
+        git_tokens_repr= git_tokens_activation(git_tokens_pool)        
         
         ## concatenate the representation of code ##
         git_merged_methname_api=Concatenate(name='merge_methname_api')([git_methname_repr,git_apiseq_repr])
@@ -141,31 +141,31 @@ class JointEmbeddingModel:
         #1.embedding
         stack_init_emb_weights = np.load(self.model_params['init_embed_weights_stack_methname']) if self.model_params['init_embed_weights_stack_methname'] is not None else None
         if stack_init_emb_weights is not None: stack_init_emb_weights = [stack_init_emb_weights]
-        embedding = Embedding(input_dim=self.data_params['n_words'],
+        stack_methname_embedding = Embedding(input_dim=self.data_params['n_words'],
                               output_dim=self.model_params.get('n_embed_dims', 100),
                               weights=stack_init_emb_weights,
                               mask_zero=False,#Whether 0 in the input is a special "padding" value that should be masked out. 
                               #If True, all subsequent layers in the model must support masking, otherwise an exception will be raised.
                               name='embedding_stack_methname')
-        stack_methname_embedding = embedding(stack_methname)
+        stack_methname_embedding = stack_methname_embedding(stack_methname)
         dropout = Dropout(0.25,name='dropout_stack_methname_embed')
         stack_methname_dropout = dropout(stack_methname_embedding)
         #2.rnn
-        f_rnn = LSTM(self.model_params.get('n_lstm_dims', 128), recurrent_dropout=0.2, 
+        stack_methname_f_rnn = LSTM(self.model_params.get('n_lstm_dims', 128), recurrent_dropout=0.2, 
                      return_sequences=True, name='lstm_stack_methname_f')
         
-        b_rnn = LSTM(self.model_params.get('n_lstm_dims', 128), return_sequences=True, 
+        stack_methname_b_rnn = LSTM(self.model_params.get('n_lstm_dims', 128), return_sequences=True, 
                      recurrent_dropout=0.2, name='lstm_stack_methname_b',go_backwards=True)        
-        stack_methname_f_rnn = f_rnn(stack_methname_dropout)
-        stack_methname_b_rnn = b_rnn(stack_methname_dropout)
+        stack_methname_f_rnn = stack_methname_f_rnn(stack_methname_dropout)
+        stack_methname_b_rnn = stack_methname_b_rnn(stack_methname_dropout)
         stack_dropout = Dropout(0.25,name='dropout_stack_methname_rnn')
         stack_methname_f_dropout = stack_dropout(stack_methname_f_rnn)
         stack_methname_b_dropout = stack_dropout(stack_methname_b_rnn)
         #3.maxpooling
-        stack_maxpool = Lambda(lambda x: K.max(x, axis=1, keepdims=False), output_shape=lambda x: (x[0], x[2]),name='maxpool_stack_methname')
-        stack_methname_pool = Concatenate(name='concat_stack_methname_lstms')([maxpool(stack_methname_f_dropout), maxpool(stack_methname_b_dropout)])
-        stack_activation = Activation('tanh',name='active_stack_methname')
-        stack_methname_repr = activation(stack_methname_pool)
+        stack_methname_maxpool = Lambda(lambda x: K.max(x, axis=1, keepdims=False), output_shape=lambda x: (x[0], x[2]),name='maxpool_stack_methname')
+        stack_methname_pool = Concatenate(name='concat_stack_methname_lstms')([stack_methname_maxpool(stack_methname_f_dropout), stack_methname_maxpool(stack_methname_b_dropout)])
+        stack_methname_activation = Activation('tanh',name='active_stack_methname')
+        stack_methname_repr = stack_methname_activation(stack_methname_pool)
         
         
         ## API Sequence Representation ##
@@ -177,21 +177,21 @@ class JointEmbeddingModel:
                                          #If True, all subsequent layers must support masking, otherwise an exception will be raised.
                               name='embedding_stack_apiseq')
         stack_apiseq_embedding = embedding(stack_apiseq)
-        stack_dropout = Dropout(0.25,name='dropout_apiseq_embed')
-        stack_apiseq_dropout = stack_dropout(stack_apiseq_embedding)
+        stack_apiseq_dropout = Dropout(0.25,name='dropout_apiseq_embed')
+        stack_apiseq_dropout = stack_apiseq_dropout(stack_apiseq_embedding)
         #2.rnn
-        f_rnn = LSTM(self.model_params.get('n_lstm_dims', 100), return_sequences=True, recurrent_dropout=0.2,
+        stack_apiseq_f_rnn = LSTM(self.model_params.get('n_lstm_dims', 100), return_sequences=True, recurrent_dropout=0.2,
                       name='stack_lstm_apiseq_f')
-        b_rnn = LSTM(self.model_params.get('n_lstm_dims', 100), return_sequences=True, recurrent_dropout=0.2, 
+        stack_apiseq_b_rnn = LSTM(self.model_params.get('n_lstm_dims', 100), return_sequences=True, recurrent_dropout=0.2, 
                       name='stack_lstm_apiseq_b', go_backwards=True)        
-        apiseq_f_rnn = f_rnn(stack_apiseq_dropout)
-        apiseq_b_rnn = b_rnn(stack_apiseq_dropout)
+        stack_apiseq_f_rnn = stack_apiseq_f_rnn(stack_apiseq_dropout)
+        stack_apiseq_b_rnn = stack_apiseq_b_rnn(stack_apiseq_dropout)
         stack_dropout = Dropout(0.25,name='dropout_apiseq_rnn')
-        stack_apiseq_f_dropout = stack_dropout(apiseq_f_rnn)
-        stack_apiseq_b_dropout = stack_dropout(apiseq_b_rnn)
+        stack_apiseq_f_dropout = stack_dropout(stack_apiseq_f_rnn)
+        stack_apiseq_b_dropout = stack_dropout(stack_apiseq_b_rnn)
         #3.maxpooling
-        stack_maxpool = Lambda(lambda x: K.max(x, axis=1, keepdims=False), output_shape=lambda x: (x[0], x[2]),name='maxpool_stack_apiseq')
-        stack_apiseq_pool = Concatenate(name='stack_concat_apiseq_lstms')([stack_maxpool(stack_apiseq_f_dropout), stack_maxpool(stack_apiseq_b_dropout)])
+        stack_apiseq_maxpool = Lambda(lambda x: K.max(x, axis=1, keepdims=False), output_shape=lambda x: (x[0], x[2]),name='maxpool_stack_apiseq')
+        stack_apiseq_pool = Concatenate(name='stack_concat_apiseq_lstms')([stack_apiseq_maxpool(stack_apiseq_f_dropout), stack_apiseq_maxpool(stack_apiseq_b_dropout)])
         activation = Activation('tanh',name='active_stack_apiseq')
         stack_apiseq_repr = activation(stack_apiseq_pool)
         
@@ -200,21 +200,21 @@ class JointEmbeddingModel:
         #1.embedding
         stack_init_emb_weights = np.load(self.model_params['init_embed_weights_stack_tokens']) if self.model_params['init_embed_weights_stack_tokens'] is not None else None
         if stack_init_emb_weights is not None: stack_init_emb_weights = [stack_init_emb_weights]
-        embedding = Embedding(input_dim=self.data_params['n_words'],
+        stack_tokens_embedding = Embedding(input_dim=self.data_params['n_words'],
                               output_dim=self.model_params.get('n_embed_dims', 100),
                               weights=stack_init_emb_weights,
                               #mask_zero=True,#Whether 0 in the input is a special "padding" value that should be masked out. 
                               #If True, all subsequent layers must support masking, otherwise an exception will be raised.
-                              name='embedding_tokens')
-        stack_tokens_embedding = embedding(stack_tokens)
+                              name='stack_tokens_embedding')
+        stack_tokens_embedding = stack_tokens_embedding(stack_tokens)
         dropout = Dropout(0.25,name='stack_dropout_tokens_embed')
         stack_tokens_dropout= dropout(stack_tokens_embedding)
 
         #4.maxpooling
-        maxpool = Lambda(lambda x: K.max(x, axis=1, keepdims=False), output_shape=lambda x: (x[0], x[2]),name='stack_maxpool_tokens')
-        stack_tokens_pool = maxpool(stack_tokens_dropout)
-        activation = Activation('tanh',name='stack_active_tokens')
-        stack_tokens_repr= activation(stack_tokens_pool)        
+        stack_tokens_maxpool = Lambda(lambda x: K.max(x, axis=1, keepdims=False), output_shape=lambda x: (x[0], x[2]),name='stack_maxpool_tokens')
+        stack_tokens_pool = stack_tokens_maxpool(stack_tokens_dropout)
+        stack_tokens_activation = Activation('tanh',name='stack_active_tokens')
+        stack_tokens_repr= stack_tokens_activation(stack_tokens_pool)        
         
         ## concatenate the representation of code ##
         stack_merged_methname_api=Concatenate(name='merge_methname_api')([stack_methname_repr,stack_apiseq_repr])
@@ -271,7 +271,7 @@ class JointEmbeddingModel:
     def compile(self, optimizer, **kwargs):
         logger.info('compiling models')
         self.git_code_repr_model.compile(loss='cosine_similarity', optimizer=optimizer, **kwargs)
-        self.git_code_repr_model.compile(loss='cosine_similarity', optimizer=optimizer, **kwargs)
+        self.stack_code_repr_model.compile(loss='cosine_similarity', optimizer=optimizer, **kwargs)
         self._training_model.compile(loss=lambda y_true, y_pred: y_pred+y_true-y_true, optimizer=optimizer, **kwargs)
         #+y_true-y_true is for avoiding an unused input warning, it can be simply +y_true since y_true is always 0 in the training set.
         self._sim_model.compile(loss='binary_crossentropy', optimizer=optimizer, **kwargs)
@@ -281,26 +281,26 @@ class JointEmbeddingModel:
         y = np.zeros(shape=x[0].shape[:1],dtype=np.float32)
         return self._training_model.fit(x, y, **kwargs)
 
-    def repr_code(self, x, **kwargs):
-        return self._code_repr_model.predict(x, **kwargs)
+    def git_repr_code(self, x, **kwargs):
+        return self.git_code_repr_model.predict(x, **kwargs)
     
-    def repr_desc(self, x, **kwargs):
-        return self._desc_repr_model.predict(x, **kwargs)
+    def stsck_repr_code(self, x, **kwargs):
+        return self.stack_code_repr_model.predict(x, **kwargs)
     
     def predict(self, x, **kwargs):
         return self._sim_model.predict(x, **kwargs)
 
-    def save(self, code_model_file, desc_model_file, **kwargs):
-        assert self._code_repr_model is not None, 'Must compile the model before saving weights'
-        self._code_repr_model.save_weights(code_model_file, **kwargs)
-        assert self._desc_repr_model is not None, 'Must compile the model before saving weights'
-        self._desc_repr_model.save_weights(desc_model_file, **kwargs)
+    def save(self, git_code_model_file, stack_code_model_file, **kwargs):
+        assert self.git_code_repr_model is not None, 'Must compile the model before saving weights'
+        self.git_code_repr_model.save_weights(git_code_model_file, **kwargs)
+        assert self.stack_code_repr_model is not None, 'Must compile the model before saving weights'
+        self.stack_code_repr_model.save_weights(stack_code_model_file, **kwargs)
 
-    def load(self, code_model_file, desc_model_file, **kwargs):
-        assert self._code_repr_model is not None, 'Must compile the model loading weights'
-        self._code_repr_model.load_weights(code_model_file, **kwargs)
-        assert self._desc_repr_model is not None, 'Must compile the model loading weights'
-        self._desc_repr_model.load_weights(desc_model_file, **kwargs)
+    def load(self, git_code_model_file, stack_code_model_file, **kwargs):
+        assert self.git_code_repr_model is not None, 'Must compile the model loading weights'
+        self.git_code_repr_model.load_weights(git_code_model_file, **kwargs)
+        assert self.stack_code_repr_model is not None, 'Must compile the model loading weights'
+        self.stack_code_repr_model.load_weights(stack_code_model_file, **kwargs)
 
  
  

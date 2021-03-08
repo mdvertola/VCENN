@@ -98,7 +98,7 @@ class SearchEngine:
                 acc, mrr, map, ndcg = self.valid(model, 1000, 1)
 
     ##### Evaluation in the develop set #####
-    def eval(self, model, poolsize, K):
+    def valid(self, model, poolsize, K):
         """
         validate in a code pool.
         param: poolsize - size of the code pool, if -1, load the whole test set
