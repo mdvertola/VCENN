@@ -142,22 +142,27 @@ class SearchEngine:
 
         #load valid dataset
         if self._eval_sets is None:
-            methnames = data_loader.load_hdf5(self.data_path+self.data_params['valid_methname'], 0, poolsize)
-            apiseqs= data_loader.load_hdf5(self.data_path+self.data_params['valid_apiseq'], 0, poolsize)
-            tokens = data_loader.load_hdf5(self.data_path+self.data_params['valid_tokens'], 0, poolsize)
-            descs = data_loader.load_hdf5(self.data_path+self.data_params['valid_desc'], 0, poolsize)
-            self._eval_sets={'methnames':methnames, 'apiseqs':apiseqs, 'tokens':tokens, 'descs':descs}
+            git_methnames = data_loader.load_hdf5(self.data_path+self.data_params['valid_methname'], 0, poolsize)
+            git_apiseqs= data_loader.load_hdf5(self.data_path+self.data_params['valid_apiseq'], 0, poolsize)
+            git_tokens = data_loader.load_hdf5(self.data_path+self.data_params['valid_tokens'], 0, poolsize)
+            stack_methnames = data_loader.load_hdf5(self.data_path+self.data_params['valid_methname'], 0, poolsize)
+            stack_apiseqs= data_loader.load_hdf5(self.data_path+self.data_params['valid_apiseq'], 0, poolsize)
+            stack_tokens = data_loader.load_hdf5(self.data_path+self.data_params['valid_tokens'], 0, poolsize)
+            self._eval_sets={'git_methnames':git_methnames, 'git_apiseqs':git_apiseqs, 'git_tokens':git_tokens, 'stack_methnames':stack_methnames, 'stack_apiseqs':stack_apiseqs, 'stack_tokens':stack_tokens}
 
         accs,mrrs,maps,ndcgs = [], [], [], []
-        data_len = len(self._eval_sets['descs'])
+        data_len = len(self._eval_sets['git_methnames'])
         for i in tqdm(range(data_len)):
-            desc=self._eval_sets['descs'][i]#good desc
-            descs = pad([desc]*data_len,self.data_params['desc_len'])
-            methnames = pad(self._eval_sets['methnames'],self.data_params['methname_len'])
-            apiseqs= pad(self._eval_sets['apiseqs'],self.data_params['apiseq_len'])
-            tokens= pad(self._eval_sets['tokens'],self.data_params['tokens_len'])
+            # desc=self._eval_sets['descs'][i]#good desc
+            # descs = pad([desc]*data_len,self.data_params['desc_len'])
+            git_methnames = pad(self._eval_sets['git_methnames'],self.data_params['git_methname_len'])
+            git_apiseqs= pad(self._eval_sets['git_apiseqs'],self.data_params['git_apiseq_len'])
+            git_tokens= pad(self._eval_sets['git_tokens'],self.data_params['git_tokens_len'])
+            stack_methnames = pad(self._eval_sets['stack_methnames'],self.data_params['stack_methname_len'])
+            stack_apiseqs= pad(self._eval_sets['stack_apiseqs'],self.data_params['stack_apiseq_len'])
+            stack_tokens= pad(self._eval_sets['stack_tokens'],self.data_params['stack_tokens_len'])
             n_results = K
-            sims = model.predict([methnames, apiseqs,tokens, descs], batch_size=data_len).flatten()
+            sims = model.predict([git_methnames, git_apiseqs, git_tokens,stack_methnames,stack_apiseqs,stack_tokens], batch_size=data_len).flatten()
             negsims= np.negative(sims)
             predict = np.argpartition(negsims, kth=n_results-1)
             predict = predict[:n_results]
@@ -240,7 +245,7 @@ def parse_args():
     parser = argparse.ArgumentParser("Train and Test Code Search(Embedding) Model")
     parser.add_argument("--data_path", type=str, default='./data/', help="working directory")
     parser.add_argument("--model", type=str, default="JointEmbeddingModel", help="model name")
-    parser.add_argument("--dataset", type=str, default="github", help="dataset name")
+    parser.add_argument("--dataset", type=str, default="stackGit", help="dataset name")
     parser.add_argument("--mode", choices=["train","eval","repr_code","search"], default='train',
                         help="The mode to run. The `train` mode trains a model;"
                         " the `eval` mode evaluat models in a test set "
