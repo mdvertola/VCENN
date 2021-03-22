@@ -10,15 +10,24 @@ def config_JointEmbeddingModel():
             'train_git_apiseq':'train.git_apiseq.h5',
             'train_git_tokens':'train.git_tokens.h5',
             #valid data
-            'valid_methname':'test.methname.h5',
-            'valid_apiseq':'test.apiseq.h5',
-            'valid_tokens':'test.tokens.h5',
-            'valid_desc':'test.desc.h5',
+            'stack_methname':'test.stack_methname.h5',
+            'stack_apiseq':'test.stack_apiseq.h5',
+            'stack_tokens':'test.stack_tokens.h5',
+            'git_methname':'test.git_methname.h5',
+            'git_apiseq':'test.git_apiseq.h5',
+            'git_tokens':'test.git_tokens.h5',
             #use data (computing code vectors)
+            'use_stack_methname':'use.stack_methname.h5',
+            'use_stack_apiseq':'use.stack_apiseq.h5',
+            'use_stack_tokens':'use.stack_tokens.h5',
+            'use_git_methname':'use.git_methname.h5',
+            'use_git_apiseq':'use.git_apiseq.h5',
+            'use_git_tokens':'use.git_tokens.h5',
+
             'use_codebase':'use.rawcode.txt',#'use.rawcode.h5'
-            'use_methname':'use.methname.h5',
-            'use_apiseq':'use.apiseq.h5',
-            'use_tokens':'use.tokens.h5',
+            # 'use_methname':'use.methname.h5',
+            # 'use_apiseq':'use.apiseq.h5',
+            # 'use_tokens':'use.tokens.h5',
             #results data(code vectors)
             'use_codevecs':'use.codevecs.normalized.h5',#'use.codevecs.h5',
 
@@ -31,11 +40,14 @@ def config_JointEmbeddingModel():
             'git_tokens_len':50,
             'desc_len': 30,
             'n_words': 10000, # len(vocabulary) + 1
+            
             #vocabulary info
-            'vocab_methname':'vocab.methname.pkl',
-            'vocab_apiseq':'vocab.apiseq.pkl',
-            'vocab_tokens':'vocab.tokens.pkl',
-            'vocab_desc':'vocab.desc.pkl',
+            'vocab_stack_methname':'vocab.stack_methname.pkl',
+            'vocab_stack_apiseq':'vocab.stack_apiseq.pkl',
+            'vocab_stack_tokens':'vocab.stack_tokens.pkl',
+            'vocab_git_methname':'vocab.git_methname.pkl',
+            'vocab_git_apiseq':'vocab.git_apiseq.pkl',
+            'vocab_git_tokens':'vocab.git_tokens.pkl',
         },
         'training_params': {
             'batch_size': 128,
@@ -51,7 +63,7 @@ def config_JointEmbeddingModel():
                 'top1': 0.4,
             },
             'save_every': 10,
-            'reload':-1, #epoch that the model is reloaded from . If reload=0, then train from scratch
+            'reload':0, #epoch that the model is reloaded from . If reload=0, then train from scratch
         },
 
         'model_params': {

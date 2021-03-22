@@ -1,6 +1,7 @@
 import os
 import sys
 import random
+import re
 import traceback
 from tensorflow.keras.optimizers import RMSprop, Adam
 from scipy.stats import rankdata
@@ -142,13 +143,13 @@ class SearchEngine:
 
         #load valid dataset
         if self._eval_sets is None:
-            git_methnames = data_loader.load_hdf5(self.data_path+self.data_params['valid_methname'], 0, poolsize)
-            git_apiseqs= data_loader.load_hdf5(self.data_path+self.data_params['valid_apiseq'], 0, poolsize)
-            git_tokens = data_loader.load_hdf5(self.data_path+self.data_params['valid_tokens'], 0, poolsize)
-            stack_methnames = data_loader.load_hdf5(self.data_path+self.data_params['valid_methname'], 0, poolsize)
-            stack_apiseqs= data_loader.load_hdf5(self.data_path+self.data_params['valid_apiseq'], 0, poolsize)
-            stack_tokens = data_loader.load_hdf5(self.data_path+self.data_params['valid_tokens'], 0, poolsize)
-            self._eval_sets={'git_methnames':git_methnames, 'git_apiseqs':git_apiseqs, 'git_tokens':git_tokens, 'stack_methnames':stack_methnames, 'stack_apiseqs':stack_apiseqs, 'stack_tokens':stack_tokens}
+            git_methnames = data_loader.load_hdf5(self.data_path+self.data_params['git_methname'], 0, poolsize)
+            git_apiseqs= data_loader.load_hdf5(self.data_path+self.data_params['git_apiseq'], 0, poolsize)
+            git_tokens = data_loader.load_hdf5(self.data_path+self.data_params['git_tokens'], 0, poolsize)
+            stack_methnames = data_loader.load_hdf5(self.data_path+self.data_params['stack_methname'], 0, poolsize)
+            stack_apiseqs= data_loader.load_hdf5(self.data_path+self.data_params['stack_apiseq'], 0, poolsize)
+            stack_tokens = data_loader.load_hdf5(self.data_path+self.data_params['stack_tokens'], 0, poolsize)
+            self._eval_sets={'git_methnames': git_methnames, 'git_apiseqs': git_apiseqs, 'git_tokens': git_tokens, 'stack_methnames': stack_methnames, 'stack_apiseqs': stack_apiseqs, 'stack_tokens':stack_tokens}
 
         accs,mrrs,maps,ndcgs = [], [], [], []
         data_len = len(self._eval_sets['git_methnames'])
@@ -176,48 +177,85 @@ class SearchEngine:
         return accs,mrrs,maps,ndcgs
 
 
-    ##### Compute Representation #####
+    ##### Compute Code Representations for StackOverflow #####
     def repr_code(self, model):
         logger.info('Loading the use data ..')
-        methnames = data_loader.load_hdf5(self.data_path+self.data_params['use_methname'],0,-1)
-        apiseqs = data_loader.load_hdf5(self.data_path+self.data_params['use_apiseq'],0,-1)
-        tokens = data_loader.load_hdf5(self.data_path+self.data_params['use_tokens'],0,-1)
-        methnames = pad(methnames, self.data_params['methname_len'])
-        apiseqs = pad(apiseqs, self.data_params['apiseq_len'])
-        tokens = pad(tokens, self.data_params['tokens_len'])
+        
+        stack_methnames = data_loader.load_hdf5(self.data_path+self.data_params['use_stack_methname'],0,-1)
+        stack_apiseqs = data_loader.load_hdf5(self.data_path+self.data_params['use_stack_apiseq'],0,-1)
+        stack_tokens = data_loader.load_hdf5(self.data_path+self.data_params['use_stack_tokens'],0,-1)
+        
+        stack_methnames = pad(stack_methnames, self.data_params['stack_methname_len'])
+        stack_apiseqs = pad(stack_apiseqs, self.data_params['stack_apiseq_len'])
+        stack_tokens = pad(stack_tokens, self.data_params['stack_tokens_len'])
 
         logger.info('Representing code ..')
-        vecs= model.repr_code([methnames, apiseqs, tokens], batch_size=10000)
+        
+        vecs= model.stack_repr_code([stack_methnames, stack_apiseqs, stack_tokens], batch_size=10000)
         vecs= vecs.astype(np.float)
         vecs= normalize(vecs)
         return vecs
 
+    ##### Github 'search terms' and realtime vector representation #####
+    def search(self, model, git_methnames, git_apiseqs, git_tokens, n_results=10):
+        use_git_methnames = data_loader.load_hdf5(self.data_path+self.data_params['use_git_methname'],0,-1)
+        use_git_apiseqs = data_loader.load_hdf5(self.data_path+self.data_params['use_git_apiseq'],0,-1)
+        use_git_tokens = data_loader.load_hdf5(self.data_path+self.data_params['use_git_tokens'],0,-1)
+        padded_git_methnames = pad(git_methnames, self.data_params['git_methname_len'])
+        padded_git_apiseqs = pad(git_apiseqs, self.data_params['git_apiseq_len'])
+        padded_git_tokens = pad(git_tokens, self.data_params['git_tokens_len'])
+        
+        
 
-    def search(self, model, vocab, query, n_results=10):
-        desc=[convert(vocab, query)]#convert desc sentence to word indices
-        padded_desc = pad(desc, self.data_params['desc_len'])
-        desc_repr=model.repr_desc([padded_desc])
-        desc_repr=desc_repr.astype(np.float32)
-        desc_repr = normalize(desc_repr).T # [dim x 1]
+        logger.info('Representing code ..')
+        
+        vecs= model.git_repr_code([padded_git_methnames, padded_git_apiseqs, padded_git_tokens])
+        vecs= vecs.astype(np.float32)
+        vecs= normalize(vecs).T
+     
+        git_code_repr = vecs
+        
+        # desc_repr=model.repr_desc([padded_desc])
+        # desc_repr=desc_repr.astype(np.float32)
+        # desc_repr = normalize(desc_repr).T # [dim x 1]
+        
         codes, sims = [], []
         threads=[]
         for i,code_reprs_chunk in enumerate(self._code_reprs):
-            t = threading.Thread(target=self.search_thread, args = (codes,sims,desc_repr,code_reprs_chunk,i,n_results))
+            t = threading.Thread(target=self.search_thread, args = (codes,sims,git_code_repr,code_reprs_chunk,i,n_results))
             threads.append(t)
         for t in threads:
             t.start()
         for t in threads:#wait until all sub-threads finish
             t.join()
         return codes,sims
+    
+    # def search(self, model, vocab, query, n_results=10):
+    #     desc=[convert(vocab, query)]#convert desc sentence to word indices
+    #     padded_desc = pad(desc, self.data_params['desc_len'])
+    #     desc_repr=model.repr_desc([padded_desc])
+    #     desc_repr=desc_repr.astype(np.float32)
+    #     desc_repr = normalize(desc_repr).T # [dim x 1]
+    #     codes, sims = [], []
+    #     threads=[]
+    #     for i,code_reprs_chunk in enumerate(self._code_reprs):
+    #         t = threading.Thread(target=self.search_thread, args = (codes,sims,desc_repr,code_reprs_chunk,i,n_results))
+    #         threads.append(t)
+    #     for t in threads:
+    #         t.start()
+    #     for t in threads:#wait until all sub-threads finish
+    #         t.join()
+    #     return codes,sims
 
-    def search_thread(self, codes, sims, desc_repr, code_reprs, i, n_results):
+    def search_thread(self, codes, sims, git_code_reprs, stack_code_reprs, i, n_results):
     #1. compute similarity
-        chunk_sims=np.dot(code_reprs, desc_repr) # [pool_size x 1]
-        chunk_sims = np.squeeze(chunk_sims, axis=1)
+        chunk_sims=np.dot(git_code_reprs, stack_code_reprs) # [pool_size x 1]
+        chunk_sims = np.squeeze(chunk_sims)
     #2. choose top results
         negsims=np.negative(chunk_sims)
         maxinds = np.argpartition(negsims, kth=n_results-1)
         maxinds = maxinds[:n_results]
+        print(type(maxinds))
         chunk_codes = [self._codebase[i][k] for k in maxinds]
         chunk_sims = chunk_sims[maxinds]
         codes.extend(chunk_codes)
@@ -291,20 +329,66 @@ if __name__ == '__main__':
             engine.load_model(model, config['training_params']['reload'])
         engine._code_reprs = data_loader.load_code_reprs(data_path+config['data_params']['use_codevecs'], engine._codebase_chunksize)
         engine._codebase = data_loader.load_codebase(data_path+config['data_params']['use_codebase'], engine._codebase_chunksize)
-        vocab = data_loader.load_pickle(data_path+config['data_params']['vocab_desc'])
+        
         while True:
             try:
-                query = input('Input Query: ')
-                n_results = int(input('How many results? '))
+                # take git code snippet as input
+                gitInfo = input('Input Vulnerable GitHub Code Snippet & Token as follows: GitHub Code @@@ Vulnerability Name ')
+                cleanGitSnip = gitInfo.split('@@@')[0]
+                
+                # Regex Rules to seperate inputted snippets into functions operations and tokens (meth,apiseq,token)
+                functionPattern = '[a-zA-Z._]+\(.*?\)+'
+                functionNamePattern = '[a-zA-Z._]+\('
+                operationsPattern = '\(.*?\)+'
+                cleanOperationsPattern = "[^a-zA-Z0-9 .:&%*\-_+=/%><!\[\]]+"
+
+                # seperate snippets and assign proper named variables for later
+                gitFunctions = re.findall(functionPattern, cleanGitSnip)
+                gitFunctionNames = str(re.findall(functionNamePattern, cleanGitSnip)).replace('\'','').replace(',','').replace('(','').replace('  ',' ')[1:-1]
+                gitOperations = str(re.sub(cleanOperationsPattern,'',str(re.findall(operationsPattern, str(gitFunctions)))).split(' ')).replace("'",'').replace(']]',']').replace('[[','[').replace('\'','').replace(',','').replace('  ',' ')[1:-1]
+                gitTokens = gitInfo.split('@@@')[1]
+
+                # rename to match current model variable names (to be removed later)
+                git_methname = gitFunctionNames
+                git_apiseq = gitOperations
+                git_tokens = gitTokens
+                # git_stuff = git_methname + git_apiseq + git_tokens 
+                # n_results = int(input('How many results? '))
+                n_results=10
             except Exception:
                 print("Exception while parsing your input:")
                 traceback.print_exc()
                 break
-            query = query.lower().replace('how to ', '').replace('how do i ', '').replace('how can i ', '').replace('?', '').strip()
-            codes,sims=engine.search(model, vocab, query, n_results)
+            # query = query.lower().replace('how to ', '').replace('how do i ', '').replace('how can i ', '').replace('?', '').strip()
+            codes,sims=engine.search(model, git_methname, git_apiseq, git_tokens, n_results)
             zipped=zip(codes,sims)
             zipped=sorted(zipped, reverse=True, key=lambda x:x[1])
             zipped=engine.postproc(zipped)
             zipped = list(zipped)[:n_results]
             results = '\n\n'.join(map(str,zipped)) #combine the result into a returning string
             print(results)
+
+
+    # elif args.mode=='search':
+    #     #search code based on a desc
+    #     if config['training_params']['reload']>0:
+    #         engine.load_model(model, config['training_params']['reload'])
+    #     engine._code_reprs = data_loader.load_code_reprs(data_path+config['data_params']['use_codevecs'], engine._codebase_chunksize)
+    #     engine._codebase = data_loader.load_codebase(data_path+config['data_params']['use_codebase'], engine._codebase_chunksize)
+    #     vocab = data_loader.load_pickle(data_path+config['data_params']['vocab_desc'])
+    #     while True:
+    #         try:
+    #             query = input('Input Vulnerable GitHub Code Snippet: ')
+    #             n_results = int(input('How many results? '))
+    #         except Exception:
+    #             print("Exception while parsing your input:")
+    #             traceback.print_exc()
+    #             break
+    #         query = query.lower().replace('how to ', '').replace('how do i ', '').replace('how can i ', '').replace('?', '').strip()
+    #         codes,sims=engine.search(model, vocab, query, n_results)
+    #         zipped=zip(codes,sims)
+    #         zipped=sorted(zipped, reverse=True, key=lambda x:x[1])
+    #         zipped=engine.postproc(zipped)
+    #         zipped = list(zipped)[:n_results]
+    #         results = '\n\n'.join(map(str,zipped)) #combine the result into a returning string
+    #         print(results)

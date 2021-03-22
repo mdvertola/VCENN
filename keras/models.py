@@ -284,7 +284,7 @@ class JointEmbeddingModel:
     def git_repr_code(self, x, **kwargs):
         return self.git_code_repr_model.predict(x, **kwargs)
     
-    def stsck_repr_code(self, x, **kwargs):
+    def stack_repr_code(self, x, **kwargs):
         return self.stack_code_repr_model.predict(x, **kwargs)
     
     def predict(self, x, **kwargs):
