@@ -197,24 +197,28 @@ class SearchEngine:
         return vecs
 
     ##### Github 'search terms' and realtime vector representation #####
-    def search(self, model, git_methnames, git_apiseqs, git_tokens, n_results=10):
-        use_git_methnames = data_loader.load_hdf5(self.data_path+self.data_params['use_git_methname'],0,-1)
-        use_git_apiseqs = data_loader.load_hdf5(self.data_path+self.data_params['use_git_apiseq'],0,-1)
-        use_git_tokens = data_loader.load_hdf5(self.data_path+self.data_params['use_git_tokens'],0,-1)
-        padded_git_methnames = pad(git_methnames, self.data_params['git_methname_len'])
-        padded_git_apiseqs = pad(git_apiseqs, self.data_params['git_apiseq_len'])
-        padded_git_tokens = pad(git_tokens, self.data_params['git_tokens_len'])
+    def search(self, model, methnameTokens, apiseqTokens, tokenTokens, git_methnames, git_apiseqs, git_tokens, n_results=10):
         
-        
+        methnames = np.asarray(convert(methnameTokens, git_methnames))
+        apiseqs = np.asarray(convert(apiseqTokens, git_apiseqs))
+        tokens = np.asarray(convert(tokenTokens, git_tokens))
+
+        gitStuff = methnames,apiseqs,tokens
+        print('functionTokens: '+ str(methnames))
+        print(type(methnames))
+        print('operationTokens: '+ str(apiseqs))
+        print('tokenTokens: '+str(tokens))
+        # desc=[convert(vocab, query)]#convert desc sentence to word indices
 
         logger.info('Representing code ..')
         
-        vecs= model.git_repr_code([padded_git_methnames, padded_git_apiseqs, padded_git_tokens])
+        vecs= model.git_repr_code(methnames,apiseqs,tokens)
+
         vecs= vecs.astype(np.float32)
-        vecs= normalize(vecs).T
-     
+        vecs= normalize(vecs)
         git_code_repr = vecs
-        
+        print('git_code_repr')
+        print(git_code_repr)
         # desc_repr=model.repr_desc([padded_desc])
         # desc_repr=desc_repr.astype(np.float32)
         # desc_repr = normalize(desc_repr).T # [dim x 1]
@@ -335,18 +339,34 @@ if __name__ == '__main__':
                 # take git code snippet as input
                 gitInfo = input('Input Vulnerable GitHub Code Snippet & Token as follows: GitHub Code @@@ Vulnerability Name ')
                 cleanGitSnip = gitInfo.split('@@@')[0]
+                methnameTokens = data_loader.load_pickle(data_path+config['data_params']['vocab_methname'])
+                apiseqTokens = data_loader.load_pickle(data_path+config['data_params']['vocab_apiseq'])
+                tokenTokens = data_loader.load_pickle(data_path+config['data_params']['vocab_tokens'])
                 
                 # Regex Rules to seperate inputted snippets into functions operations and tokens (meth,apiseq,token)
                 functionPattern = '[a-zA-Z._]+\(.*?\)+'
                 functionNamePattern = '[a-zA-Z._]+\('
                 operationsPattern = '\(.*?\)+'
                 cleanOperationsPattern = "[^a-zA-Z0-9 .:&%*\-_+=/%><!\[\]]+"
+                lettersPattern = "[a-zA-Z]+"
 
                 # seperate snippets and assign proper named variables for later
                 gitFunctions = re.findall(functionPattern, cleanGitSnip)
-                gitFunctionNames = str(re.findall(functionNamePattern, cleanGitSnip)).replace('\'','').replace(',','').replace('(','').replace('  ',' ')[1:-1]
-                gitOperations = str(re.sub(cleanOperationsPattern,'',str(re.findall(operationsPattern, str(gitFunctions)))).split(' ')).replace("'",'').replace(']]',']').replace('[[','[').replace('\'','').replace(',','').replace('  ',' ')[1:-1]
-                gitTokens = gitInfo.split('@@@')[1]
+                gitFunctionNames = str(re.findall(functionNamePattern, cleanGitSnip))
+                gitFunctionNames = re.findall(lettersPattern, str(gitFunctionNames))
+                print('functions: '+ str(gitFunctionNames))
+
+                gitOperations = re.findall(operationsPattern, str(cleanGitSnip))
+                gitOperations = re.sub(cleanOperationsPattern,'',str(gitOperations))
+                gitOperations = re.findall(lettersPattern,str(gitOperations))
+                print('operations: '+ str(gitOperations))
+                try:
+                    gitTokens = gitInfo.split('@@@')[1]
+                    gitTokens = re.findall(lettersPattern,str(gitTokens))
+                    print('tokens: '+ str(gitTokens))
+                except Exception:
+                    print('please input the following format: ')
+                    print('vulnerable code snippet @@@ relevant keywords (python, pickle, etc.)')
 
                 # rename to match current model variable names (to be removed later)
                 git_methname = gitFunctionNames
@@ -360,7 +380,7 @@ if __name__ == '__main__':
                 traceback.print_exc()
                 break
             # query = query.lower().replace('how to ', '').replace('how do i ', '').replace('how can i ', '').replace('?', '').strip()
-            codes,sims=engine.search(model, git_methname, git_apiseq, git_tokens, n_results)
+            codes,sims=engine.search(model, methnameTokens, apiseqTokens, tokenTokens, git_methname, git_apiseq, git_tokens, n_results)
             zipped=zip(codes,sims)
             zipped=sorted(zipped, reverse=True, key=lambda x:x[1])
             zipped=engine.postproc(zipped)

@@ -42,12 +42,9 @@ def config_JointEmbeddingModel():
             'n_words': 10000, # len(vocabulary) + 1
             
             #vocabulary info
-            'vocab_stack_methname':'vocab.stack_methname.pkl',
-            'vocab_stack_apiseq':'vocab.stack_apiseq.pkl',
-            'vocab_stack_tokens':'vocab.stack_tokens.pkl',
-            'vocab_git_methname':'vocab.git_methname.pkl',
-            'vocab_git_apiseq':'vocab.git_apiseq.pkl',
-            'vocab_git_tokens':'vocab.git_tokens.pkl',
+            'vocab_methname':'functionTokens.pkl',
+            'vocab_apiseq':'operationTokens.pkl',
+            'vocab_tokens':'tokenTokens.pkl',
         },
         'training_params': {
             'batch_size': 128,

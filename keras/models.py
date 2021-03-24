@@ -281,14 +281,24 @@ class JointEmbeddingModel:
         y = np.zeros(shape=x[0].shape[:1],dtype=np.float32)
         return self._training_model.fit(x, y, **kwargs)
 
-    def git_repr_code(self, x, **kwargs):
-        return self.git_code_repr_model.predict(x, **kwargs)
+    def git_repr_code(self, meth, apiseq, token, **kwargs):
+        gitAll = meth + apiseq + token
+        return self.git_code_repr_model.predict(gitAll, **kwargs)
     
     def stack_repr_code(self, x, **kwargs):
         return self.stack_code_repr_model.predict(x, **kwargs)
     
     def predict(self, x, **kwargs):
         return self._sim_model.predict(x, **kwargs)
+    
+    # def git_repr_code(self, x, **kwargs):
+    #     return self.git_code_repr_model.predict(x, **kwargs)
+    
+    # def stack_repr_code(self, x, **kwargs):
+    #     return self.stack_code_repr_model.predict(x, **kwargs)
+    
+    # def predict(self, x, **kwargs):
+    #     return self._sim_model.predict(x, **kwargs)
 
     def save(self, git_code_model_file, stack_code_model_file, **kwargs):
         assert self.git_code_repr_model is not None, 'Must compile the model before saving weights'
