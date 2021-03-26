@@ -18,7 +18,7 @@ def load_codebase(path, chunk_size):
     """
     logger.info('Loading codebase (chunk size={})..'.format(chunk_size))
     codebase=[]
-    #codes=codecs.open(self.path+self.data_params['use_codebase']).readlines()
+    # codes=codecs.open(self.path+self.data_params['use_codebase']).readlines()
     codes=codecs.open(path, encoding='utf8',errors='replace').readlines()
         #use codecs to read in case of encoding problem
     for i in tqdm(range(0,len(codes), chunk_size)):

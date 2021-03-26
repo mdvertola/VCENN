@@ -192,36 +192,44 @@ class SearchEngine:
         logger.info('Representing code ..')
         
         vecs= model.stack_repr_code([stack_methnames, stack_apiseqs, stack_tokens], batch_size=10000)
+        # 
         vecs= vecs.astype(np.float)
         vecs= normalize(vecs)
+       
         return vecs
 
     ##### Github 'search terms' and realtime vector representation #####
-    def search(self, model, methnameTokens, apiseqTokens, tokenTokens, git_methnames, git_apiseqs, git_tokens, n_results=10):
+    def search(self, model,methnameTokens, apiseqTokens, tokenTokens, git_methnames, git_apiseqs, git_tokens, n_results):
+        # 
         
-        methnames = np.asarray(convert(methnameTokens, git_methnames))
-        apiseqs = np.asarray(convert(apiseqTokens, git_apiseqs))
-        tokens = np.asarray(convert(tokenTokens, git_tokens))
-
-        gitStuff = methnames,apiseqs,tokens
+        methnames = np.asarray([convert(methnameTokens, git_methnames)])
+        apiseqs = np.asarray([convert(apiseqTokens, git_apiseqs)])
+        tokens = np.asarray([convert(tokenTokens, git_tokens)])
+        
+        padded_methnames = pad(methnames, self.data_params['git_methname_len'])
+        padded_apiseqs = pad(apiseqs, self.data_params['git_apiseq_len'])
+        padded_tokens = pad(tokens, self.data_params['git_tokens_len'])
+        
+        
+        
+        
+        
         print('functionTokens: '+ str(methnames))
-        print(type(methnames))
         print('operationTokens: '+ str(apiseqs))
         print('tokenTokens: '+str(tokens))
-        # desc=[convert(vocab, query)]#convert desc sentence to word indices
-
+        print('__________________________________________________________________________________________________________________')
         logger.info('Representing code ..')
         
-        vecs= model.git_repr_code(methnames,apiseqs,tokens)
 
-        vecs= vecs.astype(np.float32)
+
+        vecs= model.git_repr_code([padded_methnames,padded_apiseqs,padded_tokens], batch_size=10000)
+        vecs= vecs.astype(np.float)
         vecs= normalize(vecs)
-        git_code_repr = vecs
-        print('git_code_repr')
-        print(git_code_repr)
-        # desc_repr=model.repr_desc([padded_desc])
-        # desc_repr=desc_repr.astype(np.float32)
-        # desc_repr = normalize(desc_repr).T # [dim x 1]
+        git_code_repr = vecs.T
+
+        # print('git_code_repr')
+        # print(git_code_repr)
+        
         
         codes, sims = [], []
         threads=[]
@@ -251,15 +259,14 @@ class SearchEngine:
     #         t.join()
     #     return codes,sims
 
-    def search_thread(self, codes, sims, git_code_reprs, stack_code_reprs, i, n_results):
+    def search_thread(self, codes, sims, git_code_reprs, code_reprs,i, n_results):
     #1. compute similarity
-        chunk_sims=np.dot(git_code_reprs, stack_code_reprs) # [pool_size x 1]
+        chunk_sims=np.dot(code_reprs,git_code_reprs) # [pool_size x 1]
         chunk_sims = np.squeeze(chunk_sims)
     #2. choose top results
         negsims=np.negative(chunk_sims)
         maxinds = np.argpartition(negsims, kth=n_results-1)
         maxinds = maxinds[:n_results]
-        print(type(maxinds))
         chunk_codes = [self._codebase[i][k] for k in maxinds]
         chunk_sims = chunk_sims[maxinds]
         codes.extend(chunk_codes)
@@ -337,7 +344,16 @@ if __name__ == '__main__':
         while True:
             try:
                 # take git code snippet as input
-                gitInfo = input('Input Vulnerable GitHub Code Snippet & Token as follows: GitHub Code @@@ Vulnerability Name ')
+                print('\n')
+                print('Vulnerable Code Clone Detection')
+                print('__________________________________________________________________________________________________________________')
+               
+                print('Find Vulnerable GitHub Code In StackOverflow')
+                print('The search expects the following input format: ')
+                print('Vulnerable Code Snippet @@@ Relevent Information')
+                print('__________________________________________________________________________________________________________________')
+                gitInfo = input('Input: ')
+                gitInfo = gitInfo.lower()
                 cleanGitSnip = gitInfo.split('@@@')[0]
                 methnameTokens = data_loader.load_pickle(data_path+config['data_params']['vocab_methname'])
                 apiseqTokens = data_loader.load_pickle(data_path+config['data_params']['vocab_apiseq'])
@@ -372,11 +388,13 @@ if __name__ == '__main__':
                 git_methname = gitFunctionNames
                 git_apiseq = gitOperations
                 git_tokens = gitTokens
+
+
                 # git_stuff = git_methname + git_apiseq + git_tokens 
                 # n_results = int(input('How many results? '))
                 n_results=10
             except Exception:
-                print("Exception while parsing your input:")
+                print("Exception while parsing your input:") 
                 traceback.print_exc()
                 break
             # query = query.lower().replace('how to ', '').replace('how do i ', '').replace('how can i ', '').replace('?', '').strip()
