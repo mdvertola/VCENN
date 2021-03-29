@@ -39,17 +39,17 @@ def config_JointEmbeddingModel():
             'git_apiseq_len':30,
             'git_tokens_len':50,
             'desc_len': 30,
-            'n_words': 10000, # len(vocabulary) + 1
+            'n_words': 999999, # len(vocabulary) + 1
             
             #vocabulary info
-            'vocab_methname':'functionTokens.pkl',
-            'vocab_apiseq':'operationTokens.pkl',
-            'vocab_tokens':'tokenTokens.pkl',
+            'vocab_methname':'vocab.methname.pkl',
+            'vocab_apiseq':'vocab.apiseq.pkl',
+            'vocab_tokens':'vocab.tokens.pkl',
         },
         'training_params': {
             'batch_size': 128,
             'chunk_size':100000,
-            'nb_epoch': 1,
+            'nb_epoch': 10,
             'validation_split': 0.2,
             'optimizer': 'adam',
             # 'optimizer': Adam(clip_norm=0.1),
